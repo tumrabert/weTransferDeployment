@@ -1,0 +1,9 @@
+services:
+  wedl-api:
+    build: .
+    container_name: wedl-api
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=UTC
+    restart: unless-stopped

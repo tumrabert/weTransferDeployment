@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+CLAUDE.md
+
+# Build artifacts
+wedl
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Downloads
+downloads/
+*.pdf
+*.zip
+*.tar.gz
+
+# Docker files (prevent recursion)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# CI/CD
+.github/
+
+# STL files
+*.stl

@@ -1,100 +1,188 @@
-# wedl
+# wedl - WeTransfer API Server
 
 [![Test latest release](https://github.com/gnojus/wedl/actions/workflows/test.yml/badge.svg)](https://github.com/gnojus/wedl/actions/workflows/test.yml)
 
-## Command line utility to download from wetransfer
+HTTP API server for downloading files from WeTransfer. Returns files as base64-encoded JSON responses.
 
-Easily download from wetransfer.com in the command line.
+Uses unofficial WeTransfer API used when downloading with a browser. Written in Go.
 
-Uses unofficial wetransfer API used when downloading with a browser.
+## Quick Start with Docker
 
-Written in Go.
-
-## Usage
+### 1. Start the API Server
 
 ```bash
-$ wedl --help
-Usage:
-  wedl [options] <URL>
-
-Options:
-  -h --help               Show this screen.
-  -v --version            Print version and exit.
-  -o FILE --output=FILE   Output file. Use - for stdout.
-  -p PATH --path=PATH     Downloaded files directory.
-  -s --silent             Silent. Do not output anything to stderr.
-  -f --force              Overwrite files if needed.
-  -i --info               Write download info to stdout and exit.
-```
-
-## Instaling
-
-Download binaries from [releases](https://github.com/gnojus/wedl/releases).
-
-Or compile from source and install with the [Go toolchain](https://go.dev/dl/):
-
-```
-go install github.com/gnojus/wedl@latest
-```
-
-### Linux and MacOS
-
-Or compile from source:
-
-```
-git clone https://github.com/gnojus/wedl.git
-cd wedl 
-go build
-```
-
-### Windows
-
-Compile from source:
-
-```cmd
+# Clone the repository
 git clone https://github.com/gnojus/wedl.git
 cd wedl
 
-:: Build
-
-:: Build executable
-go build
-
-:: Or Build with -output flag
-go build -o wedl.exe wedl.go
+# Start the API server
+docker-compose up -d
 ```
 
-## Run
+The API server will be available at `http://localhost:8080`
 
-### Linux and MacOS
+### 2. Test the API
 
-```
-./wedl --help
-```
+```bash
+# Check if the server is running
+curl http://localhost:8080/health
 
-### Windows
-
-```
-wedl.exe --help
+# Expected response:
+# {"status":"ok","timestamp":"2025-07-15T03:43:19Z"}
 ```
 
-### Usage examples
+## API Usage
 
-```sh
-# Help
-go run . --help
+### Download Files
 
-# Standart Download
-go run . https://go.wetransfer.com/responsibility
+**Endpoint:** `POST /wetransfer`
 
-# Download to ./test/ directory
-go run . -p test https://we.tl/responsibility
-
-# Download to downloaded.zip
-go run . -o downloaded.zip https://we.tl/responsibility
-
-# Write download info to stdout
-go run . -i https://we.tl/responsibility
-# output: {"dl_url":"<dl_url>","dl_size":22344484,"dl_filename":"WeTransfer_Responsible_Business_Report_2020.pdf"}
-
+**Request:**
+```bash
+curl --location 'http://localhost:8080/wetransfer' \
+--header 'Content-Type: application/json' \
+--data '{
+    "wetransfer_url": "https://we.tl/your-wetransfer-url"
+}'
 ```
+
+**Response:**
+```json
+{
+    "fileName": "document.pdf",
+    "fileBinary": "JVBERi0xLjQKMSAwIG9iago8PAovVHlwZS..."
+}
+```
+
+- `fileName`: The original filename from WeTransfer
+- `fileBinary`: Base64-encoded file content
+
+### Password-Protected Files
+
+For password-protected transfers, include the password:
+
+```bash
+curl --location 'http://localhost:8080/wetransfer' \
+--header 'Content-Type: application/json' \
+--data '{
+    "wetransfer_url": "https://we.tl/your-protected-url",
+    "password": "your-password"
+}'
+```
+
+### Get File Information
+
+**Endpoint:** `POST /info`
+
+Get file metadata without downloading:
+
+```bash
+curl --location 'http://localhost:8080/info' \
+--header 'Content-Type: application/json' \
+--data '{
+    "wetransfer_url": "https://we.tl/your-wetransfer-url"
+}'
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "filename": "document.pdf",
+    "size": 1234567,
+    "dl_url": "https://..."
+}
+```
+
+## Docker Configuration
+
+### Using docker-compose (Recommended)
+
+```yaml
+services:
+  wedl-api:
+    build: .
+    container_name: wedl-api
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+```
+
+### Using Docker directly
+
+```bash
+# Build the image
+docker build -t wedl .
+
+# Run the container
+docker run -d -p 8080:8080 --name wedl-api wedl
+```
+
+### Custom Port
+
+To run on a different port:
+
+```bash
+# Using docker-compose (modify docker-compose.yml ports)
+services:
+  wedl-api:
+    ports:
+      - "3000:8080"  # External:Internal
+
+# Using Docker directly
+docker run -d -p 3000:8080 --name wedl-api wedl
+```
+
+## Development
+
+### Local Development
+
+```bash
+# Install dependencies
+go mod download
+
+# Run API server locally
+go run api-server.go -port 8080
+
+# Or build and run
+go build -o api-server api-server.go
+./api-server -port 8080
+```
+
+### CLI Tool (Legacy)
+
+The project also includes a CLI tool:
+
+```bash
+# Build CLI tool
+go build -o wedl wedl.go
+
+# Use CLI tool
+./wedl https://we.tl/example-url
+```
+
+## Error Handling
+
+The API returns appropriate HTTP status codes:
+
+- `200 OK`: Success
+- `400 Bad Request`: Invalid URL or request format
+- `405 Method Not Allowed`: Wrong HTTP method
+- `500 Internal Server Error`: Server error
+
+Error responses include details:
+```json
+{
+    "success": false,
+    "error": "Failed to get download response: invalid URL"
+}
+```
+
+## Notes
+
+- Files are loaded entirely into memory before base64 encoding
+- Large files may cause memory issues
+- WeTransfer URLs typically expire after a certain time
+- This uses the unofficial WeTransfer API and may break if they change their implementation
