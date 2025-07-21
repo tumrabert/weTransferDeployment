@@ -122,6 +122,18 @@ curl -X POST http://localhost:8080/download \
 
 ## Docker Deployment
 
+### Quick Start with Docker Compose
+```bash
+# One-command deployment
+./deploy.sh
+
+# Manual deployment
+docker-compose up -d
+
+# Stop services
+docker-compose down
+```
+
 ### Building and Running with Docker
 ```bash
 # Build Docker image (includes API server)
@@ -130,18 +142,43 @@ docker build -t wedl .
 # Run API server
 docker run --rm -p 8080:8080 wedl
 
-# Run with docker-compose
-docker-compose up -d
-
 # Test API
 curl http://localhost:8080/health
 ```
 
-### Docker Configuration
-- Builds both CLI tool and API server
-- API server runs on port 8080 by default
+### Docker Compose Configuration
+The enhanced `docker-compose.yml` includes:
+- **Health checks**: Automatic service monitoring with `/health` endpoint
+- **Environment variables**: Configurable port and timezone via `.env` file
+- **Resource limits**: Memory constraints for optimal performance
+- **Persistent volumes**: Downloads directory for file caching
+- **Custom networking**: Isolated bridge network for security
+- **Auto-restart**: Service automatically restarts on failure
+
+### Configuration
+Copy `.env.example` to `.env` and customize:
+```bash
+# Port for the API server (default: 8080)
+PORT=8080
+
+# Timezone (default: UTC)  
+TZ=UTC
+```
+
+### Deployment Script Features
+The `deploy.sh` script provides:
+- Dependency checks for Docker and Docker Compose
+- Automatic `.env` file creation from template
+- Health check verification after deployment
+- Usage examples and management commands
+- Error handling and status reporting
+
+### Docker Configuration Details
+- Builds both CLI tool and API server in multi-stage build
+- API server runs on port 8080 by default (configurable)
 - Includes ca-certificates for HTTPS requests
-- No volume mounting needed (files streamed directly)
+- Files streamed directly without persistent storage requirement
+- Supports password-protected WeTransfer links
 
 ## Key Implementation Details
 
